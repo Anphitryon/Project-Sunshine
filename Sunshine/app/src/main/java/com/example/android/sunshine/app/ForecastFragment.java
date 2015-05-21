@@ -1,5 +1,6 @@
 package com.example.android.sunshine.app;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -14,33 +15,30 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v4.content.CursorLoader;
 
 import com.example.android.sunshine.app.data.WeatherContract;
 
-import java.util.ArrayList;
+import java.util.List;
 
 
 /**
  * A placeholder fragment containing a simple view.
  */
-public class ForecastFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
+public class ForecastFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
 
     private ForecastAdapter mForecastAdapter;
     private static final int MY_LOADER = 1;
+    Callback callbackListener;
+    private final String POSITION = "POS";
+    private int savedPosition;
+    private ListView listView;
+    private boolean mUseTodayLayout;
 
     private static final String[] FORECAST_COLUMNS = {
-            // In this case the id needs to be fully qualified with a table name, since
-            // the content provider joins the location & weather tables in the background
-            // (both have an _id column)
-            // On the one hand, that's annoying.  On the other, you can search the weather table
-            // using the location set by the user, which is only in the Location table.
-            // So the convenience is worth it.
             WeatherContract.WeatherEntry.TABLE_NAME + "." + WeatherContract.WeatherEntry._ID,
             WeatherContract.WeatherEntry.COLUMN_DATE,
             WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
@@ -65,6 +63,13 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     static final int COL_COORD_LONG = 8;
 
     public ForecastFragment() {
+    }
+
+    public void setUseTodayLayout(boolean useTodayLayout) {
+        mUseTodayLayout = useTodayLayout;
+        if (mForecastAdapter != null) {
+                mForecastAdapter.setUseTodayLayout(mUseTodayLayout);
+            }
     }
 
     @Override
@@ -96,18 +101,16 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        updateWeather();
-    }
-
-    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+                             final Bundle savedInstanceState) {
 
         View baseView = inflater.inflate(R.layout.fragment_main, container, false);
 
+        if(savedInstanceState != null){
+            savedPosition = savedInstanceState.getInt(POSITION);
+        }
 
+        listView = (ListView) getActivity().findViewById(R.id.listview_forecast);
 
         String locationSetting = Utility.getPreferredLocation(getActivity());
 
@@ -131,14 +134,20 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
                 Cursor cursor = (Cursor) parent.getItemAtPosition(position);
                 if (cursor != null) {
                     String locationSetting = Utility.getPreferredLocation(getActivity());
-                    Intent intent = new Intent(getActivity(), DetailActivity.class)
-                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                    ((Callback) getActivity())
+                            .onItemSelected(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
                                     locationSetting, cursor.getLong(COL_WEATHER_DATE)
-                            ));
-                    startActivity(intent);
+                    ));
+                    savedPosition = position;
                 }
             }
         });
+
+        mForecastAdapter.setUseTodayLayout(mUseTodayLayout);
+
+        if(savedInstanceState != null && savedInstanceState.containsKey(POSITION)){
+            savedPosition = savedInstanceState.getInt(POSITION);
+        }
 
         return baseView;
     }
@@ -148,6 +157,11 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         String location = preferences.getString(this.getActivity().getResources().getString(R.string.pref_location_key), this.getActivity().getResources().getString(R.string.pref_location_default));
         FetchWeatherTask fetchWeatherTask = new FetchWeatherTask(getActivity());
         fetchWeatherTask.execute(location);
+    }
+
+    public void onLocationChanged(){
+        updateWeather();
+        getLoaderManager().restartLoader(MY_LOADER, null, this);
     }
 
     @Override
@@ -167,10 +181,38 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor){
         mForecastAdapter.swapCursor(cursor);
+
+        if(savedPosition != ListView.INVALID_POSITION){
+            listView.setSelection(savedPosition);
+        }
+
     }
 
     public void onLoaderReset(Loader<Cursor> cursorLoader){
         mForecastAdapter.swapCursor(null);
+    }
+
+    public void onAttach(Activity activity){
+        super.onAttach(activity);
+        try{
+            callbackListener = (Callback) activity;
+        } catch (ClassCastException e){
+            throw new ClassCastException(activity.toString());
+        }
+    }
+
+    public void onSavedInstanceState(Bundle outState){
+        if(savedPosition != ListView.INVALID_POSITION){
+            outState.putInt(POSITION, savedPosition);
+        }
+        super.onSaveInstanceState(outState);
+    }
+
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(Uri dateUri);
     }
 
 
