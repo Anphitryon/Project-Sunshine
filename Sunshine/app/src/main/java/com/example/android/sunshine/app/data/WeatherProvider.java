@@ -24,6 +24,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 
+import java.util.Calendar;
+
 public class WeatherProvider extends ContentProvider {
 
     // The URI Matcher used by this content provider.
@@ -331,6 +333,14 @@ public class WeatherProvider extends ContentProvider {
     public int bulkInsert(Uri uri, ContentValues[] values) {
         final SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         final int match = sUriMatcher.match(uri);
+
+        /*
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DATE, -1);
+        long yesterdayDate = WeatherContract.normalizeDate(calendar.getTimeInMillis());
+        this.delete(WeatherContract.WeatherEntry.CONTENT_URI, WeatherContract.WeatherEntry.COLUMN_DATE + "=?", new String[]{String.valueOf(yesterdayDate)});
+
+        */
         switch (match) {
             case WEATHER:
                 db.beginTransaction();
@@ -352,6 +362,8 @@ public class WeatherProvider extends ContentProvider {
             default:
                 return super.bulkInsert(uri, values);
         }
+
+
     }
 
     // You do not need to call this method. This is a method specifically to assist the testing

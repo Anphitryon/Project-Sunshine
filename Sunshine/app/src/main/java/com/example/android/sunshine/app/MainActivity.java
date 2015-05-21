@@ -12,6 +12,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ListView;
 
+import com.example.android.sunshine.app.sync.SunshineSyncAdapter;
+
 
 public class MainActivity extends ActionBarActivity implements ForecastFragment.Callback{
 
@@ -44,7 +46,7 @@ public class MainActivity extends ActionBarActivity implements ForecastFragment.
                     .findFragmentById(R.id.fragment_forecast));
         forecastFragment.setUseTodayLayout(!mTwoPane);
 
-
+        SunshineSyncAdapter.initializeSyncAdapter(this);
 
 
 

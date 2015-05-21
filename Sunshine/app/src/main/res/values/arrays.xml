@@ -11,4 +11,14 @@
         <item>imperial</item>
     </string-array>
 
+    <string-array name="notificationArray">
+        <item>On</item>
+        <item>Off</item>
+    </string-array>
+
+    <string-array name="notificationValues">
+        <item>on</item>
+        <item>off</item>
+    </string-array>
+
 </resources>
